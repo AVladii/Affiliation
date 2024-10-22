@@ -1,28 +1,39 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import fs from 'fs';
-import path from 'path';
+import { NextApiRequest, NextApiResponse } from 'next';
+import * as admin from 'firebase-admin';
+
+// Firebase initialisieren, falls es noch nicht initialisiert ist
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const firestore = admin.firestore();
 
 // Helper function to process webhook data
 const processWebhook = async (data: any) => {
   const { discount_code, customer } = data;
 
-  // You can log the received data or store it in Firebase:
+  // Logge die empfangenen Daten
   console.log('Received discount code:', discount_code);
   console.log('Customer data:', customer);
 
-  // Data structure to save
+  // Datenstruktur zur Speicherung
   const fileData = {
     firstname: customer.firstname,
     lastname: customer.lastname,
     email: customer.email,
-    discountCode: discount_code || "No discount code provided"
+    discountCode: discount_code || 'No discount code provided',
   };
 
-  // Path to save the data
-  const filePath = path.join(process.cwd(), 'data.json');
-
-  // Write the data to the JSON file
-  fs.writeFileSync(filePath, JSON.stringify(fileData, null, 2), 'utf-8');
+  // Daten in Firestore speichern
+  const docRef = firestore.collection('discount_codes').doc(); // Automatische Generierung der Dokument-ID
+  await docRef.set(fileData); // Speichern der Daten in Firestore
+  console.log('Data stored in Firestore:', fileData);
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -30,10 +41,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const data = req.body;
 
-      // You can log the webhook for verification
+      // Webhook loggen zur Überprüfung
       console.log('Webhook received:', data);
 
-      // Process the webhook
+      // Webhook verarbeiten
       await processWebhook(data);
 
       res.status(200).json({ message: 'Webhook received and processed.' });
