@@ -33,6 +33,8 @@ const processWebhook = async (data: any) => {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
+    console.log('Received POST request:', req.body); // Debugging-Zweck
+
     try {
       const data = req.body;
 
@@ -45,6 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.status(500).json({ message: 'Internal Server Error' });
     }
   } else {
+    console.log('Method not allowed:', req.method);
     res.status(405).json({ message: 'Method not allowed' });
   }
 }
